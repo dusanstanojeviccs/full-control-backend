@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=2">
+
+	<title>jsmpeg streaming</title>
+	<style type="text/css">
+		body {
+			background: #333;
+			text-align: center;
+			margin-top: 10%;
+			font-family: Helvetica;
+		}
+		#videoCanvas {
+			width: 720px;
+			height: 450px;
+			max-width: 720px;
+			max-height: 450px;
+		}
+		.hidden {
+			display: none;
+		}
+		#linkContainer {
+			background: white;
+			min-width: 400px;
+			min-height: 300px;
+			max-width: 400px;
+			max-height: 300px;
+			margin: auto;
+		}
+		#linkContainer h1 {
+			padding-top: 20px;
+			color: #0085ff;
+		}
+		#linkContainer a {
+			cursor: pointer;
+		}
+		#linkContainer a:hover {
+			color: #00c0ff;
+		}
+	</style>
+</head>
+<body>
+	<div id="linkContainer" class="hidden">
+		<h1>Clients</h1>
+
+	</div>
+	<canvas id="videoCanvas" style="width: 720px;height: 450px;max-width: 720px;max-height: 450px;">
+		<p>
+			Please use a browser that supports the Canvas Element, like
+			<a href="http://www.google.com/chrome">Chrome</a>,
+			<a href="http://www.mozilla.com/firefox/">Firefox</a>,
+			<a href="http://www.apple.com/safari/">Safari</a> or Internet Explorer 10
+		</p>
+	</canvas>
+	<script type="text/javascript" src="jsmpg.js"></script>
+	<script type="text/javascript">
+		var state = 0, usernameUnderControl = "";
+
+		var getPathInfo = function (path) {
+		    var link = document.createElement('a');
+		    link.setAttribute('href', path);
+
+		    return {
+		        host:     link.hostname,
+		        port:     link.port,
+		        path:     link.pathname,
+		        protocol: link.protocol
+		    }
+		};
+
+		var httpGetAsync = function (theUrl, callback) {
+		    var xmlHttp = new XMLHttpRequest();
+		    xmlHttp.onreadystatechange = function() { 
+		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+		            callback(xmlHttp.responseText);
+		    }
+		    xmlHttp.open("GET", theUrl, true); // true for asynchronous 
+		    xmlHttp.send(null);
+		};
+
+		var toggleTo = function(username) {
+			state = 1;
+			usernameUnderControl = username;
+			loadApp();
+		};
+
+		var loadApp = function() {
+			if (state === 0) {
+				document.getElementById("linkContainer").classList.remove("hidden");
+				document.getElementById("videoCanvas").classList.add("hidden");
+
+				httpGetAsync("/rest/listdata", function(response) {
+					var arr = JSON.parse(response);
+					for (var i = 0; i < arr.length; i++) {
+						document.getElementById("linkContainer").innerHTML += ("<a onclick=\"toggleTo('"+arr[i]+"')\">" + arr[i] + "</a>");
+					}
+				});
+			}
+			if (state === 1) {
+				document.getElementById("linkContainer").classList.add("hidden");
+				document.getElementById("videoCanvas").classList.remove("hidden");
+				
+				var clientLocation = 'ws://'+getPathInfo(window.location)['host']+':8084/'+usernameUnderControl;
+				var client = new WebSocket( clientLocation );
+				var canvas = document.getElementById('videoCanvas');
+				var player = new jsmpeg(client, {canvas:canvas});
+
+
+				var socketMaster = {};
+				var reconnectSocket = function() {
+					var location = 'ws://127.0.0.1:8086/';
+					socketMaster = new WebSocket( 'ws://'+getPathInfo(window.location)['host']+':8086/' );
+
+
+					socketMaster.onclose = function() {
+						reconnectSocket();
+					};
+					socketMaster.onopen = function() {
+						socketMaster.send(JSON.stringify({auth: true, username: usernameUnderControl}))
+					};
+				};
+				reconnectSocket();
+
+				var videoCanvas = document.getElementById("videoCanvas");
+
+				videoCanvas.onclick = function(e) {
+					socketMaster.send(JSON.stringify({
+						type: "click", 
+						x: e.offsetX/videoCanvas.offsetWidth, 
+						y: e.offsetY/videoCanvas.offsetHeight
+					}));
+				};
+				videoCanvas.onmousemove = function(e){
+				    socketMaster.send(JSON.stringify({
+				    	type: "move", 
+				    	x: e.offsetX/videoCanvas.offsetWidth, 
+				    	y: e.offsetY/videoCanvas.offsetHeight
+				    }));
+				};
+
+				document.onkeydown = function(evt) {
+				    evt = evt || window.event;
+				    if (evt.key === "Enter") {
+				    	socketMaster.send(JSON.stringify({type: "enter"}));
+				    } else {
+				    	socketMaster.send(JSON.stringify({type: "text", value: evt.key}));
+				    }
+				};
+			}
+		};
+
+		loadApp();
+	</script>
+</body>
+</html>

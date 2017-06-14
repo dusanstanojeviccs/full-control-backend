@@ -1,21 +1,29 @@
 {
-  "name": "full-control-backend",
-  "version": "0.0.1",
-  "description": "University project",
-  "engines": {
-    "node": "6.10.2"
-  },
+  "name": "full-controll-backend",
+  "version": "1.0.0",
+  "description": "Full Controll Backend",
   "main": "index.js",
+  "dependencies": {
+    "mongodb": "^2.2.26",
+    "node-session": "^1.2.1",
+    "ws": "^2.2.2"
+  },
+  "devDependencies": {},
   "scripts": {
-    "start": "node index.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/dusanstanojeviccs/full-control-backend"
+    "url": "git+https://github.com/dusanstanojeviccs/full-control-backend.git"
   },
   "keywords": [
-    "node",
-    "heroku"
+    "full",
+    "controll"
   ],
-  "license": "MIT"
+  "author": "Dusan Stanojevic DDux",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dusanstanojeviccs/full-control-backend/issues"
+  },
+  "homepage": "https://github.com/dusanstanojeviccs/full-control-backend#readme"
 }
